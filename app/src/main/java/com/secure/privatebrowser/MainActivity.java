@@ -66,7 +66,10 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // Кірген кезде бір-ақ рет рұқсат сұрау функциясы
         askPermissionsOnce();
+        
+        // Баяғы сен айтқан 8080 бұрылысы
         myWebView.loadUrl("http://localhost:8080");
     }
 
