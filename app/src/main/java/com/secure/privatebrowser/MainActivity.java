@@ -13,11 +13,14 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private WebView myWebView;
     private SwipeRefreshLayout swipeRefreshLayout;
 
+    private static final int MULTIPLE_PERMISSIONS_CODE = 100;
     private static final int CAMERA_CODE = 101;
     private static final int LOCATION_CODE = 102;
 
@@ -34,6 +37,9 @@ public class MainActivity extends AppCompatActivity {
         swipeRefreshLayout.addView(myWebView);
         setContentView(swipeRefreshLayout);
 
+        // БРАУЗЕРГЕ КІРГЕН КЕЗДЕ: Камера мен орын анықтау рұқсаттарын бірден сұрау жүйесі
+        checkAndRequestAppPermissions();
+
         // Браузер ядросының негізгі параметрлері
         WebSettings webSettings = myWebView.getSettings();
         webSettings.setJavaScriptEnabled(true);
@@ -49,15 +55,6 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setUserAgentString(mobileUserAgent);
 
         myWebView.setWebViewClient(new WebViewClient() {
-            @Override
-            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
-                super.onPageStarted(view, url, favicon);
-                
-                // Бет жүктеле бастағанда APK деңгейіндегі рұқсаттарды тексеру
-                triggerLocationPermission();
-                triggerCameraPermission();
-            }
-
             @Override
             public void onPageFinished(WebView view, String url) {
                 swipeRefreshLayout.setRefreshing(false);
@@ -99,29 +96,34 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // СЕНІҢ ТАЛАБЫҢ: Ішкі localhost:8080 портына тікелей бағыттау
+        // Localhost:8080 мекенжайын жүктеу
         myWebView.loadUrl("http://localhost:8080");
     }
 
-    private void triggerLocationPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_CODE);
-        }
-    }
+    // Қолданба ашылған бойда рұқсаттарды тексеріп, жаппай сұрау функциясы
+    private void checkAndRequestAppPermissions() {
+        List<String> permissionsNeeded = new ArrayList<>();
 
-    private void triggerCameraPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                 != PackageManager.PERMISSION_GRANTED) {
+            permissionsNeeded.add(Manifest.permission.CAMERA);
+        }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            permissionsNeeded.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        }
+
+        if (!permissionsNeeded.isEmpty()) {
             ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.CAMERA}, CAMERA_CODE);
+                    permissionsNeeded.toArray(new String[0]), MULTIPLE_PERMISSIONS_CODE);
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        
         if (requestCode == CAMERA_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 if (currentCameraRequest != null) {
@@ -134,6 +136,9 @@ public class MainActivity extends AppCompatActivity {
                     currentGeolocationCallback.invoke(currentGeolocationOrigin, true, false);
                 }
             }
+        } else if (requestCode == MULTIPLE_PERMISSIONS_CODE) {
+            // Жаппай сұраныс нәтижесі (қолданбаға алғаш кірген кездегі өңдеу)
+            // Бұл жерде қажет болса, рұқсат берілгеннен кейінгі ішкі логиканы реттеуге болады
         }
     }
 }
