@@ -37,6 +37,10 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         webSettings.setAllowFileAccess(true);
 
+        // ⚡ ОНЛАЙН ЖҮЙЕ ҚУЛЫҒЫ: Кэштеуді толық өшіреміз.
+        // Осылайша сен серверде кодты өзгерткенде, телефонда бірден жаңа нұсқа шығады.
+        webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+
         String mobileUserAgent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
         webSettings.setUserAgentString(mobileUserAgent);
 
@@ -62,11 +66,15 @@ public class MainActivity extends AppCompatActivity {
         swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
+                myWebView.clearCache(true);
                 myWebView.reload();
             }
         });
 
         askPermissionsOnce();
+        
+        // 🌍 БҰЛ ЖЕРГЕ СЕНІҢ ОНЛАЙН СЕРВЕРІҢНІҢ СІЛТЕМЕСІ КІРЕДІ
+        // Қазір сынақ үшін localhost болып тұрсын, келесі қадамда мұны онлайн қыламыз!
         myWebView.loadUrl("http://localhost:8080");
     }
 
