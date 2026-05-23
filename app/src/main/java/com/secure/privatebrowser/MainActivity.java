@@ -13,7 +13,8 @@ import androidx.appcompat.app.AppCompatActivity;
 public class MainActivity extends AppCompatActivity {
 
     private WebView myWebView;
-    private static final String TARGET_SERVER = "http://192.168.1.100:8080"; 
+    // Локальді Python серверінің мекенжайы
+    private static final String TARGET_SERVER = "http://127.0.0.1:8080"; 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,14 +25,14 @@ public class MainActivity extends AppCompatActivity {
 
         WebSettings webSettings = myWebView.getSettings();
         webSettings.setJavaScriptEnabled(true);
-        webSettings.setGeolocationEnabled(true);
         webSettings.setDomStorageEnabled(true);
 
         myWebView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
-                if (url.contains(".kaz")) {
+                // Егер сілтемеде .kaz болса немесе target.kaz ашылса, оны ішкі серверге бағыттау
+                if (url.contains(".kaz") || url.contains("target.kaz")) {
                     view.loadUrl(TARGET_SERVER);
                     return true;
                 }
@@ -44,13 +45,9 @@ public class MainActivity extends AppCompatActivity {
             public void onPermissionRequest(final PermissionRequest request) {
                 runOnUiThread(() -> request.grant(request.getResources()));
             }
-
-            @Override
-            public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
-                callback.invoke(origin, true, false);
-            }
         });
 
+        // Бастапқы жүктелетін бет
         myWebView.loadUrl("http://target.kaz");
     }
 }
