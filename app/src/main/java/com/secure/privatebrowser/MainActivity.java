@@ -1,19 +1,14 @@
 package com.secure.privatebrowser;
 
 import android.Manifest;
-import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -23,7 +18,6 @@ public class MainActivity extends AppCompatActivity {
     private WebView myWebView;
     private SwipeRefreshLayout swipeRefreshLayout;
 
-    private static final int OVERLAY_REQUEST_CODE = 54321;
     private static final int CAMERA_CODE = 101;
     private static final int LOCATION_CODE = 102;
 
@@ -35,11 +29,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // 1-КЕЗЕҢ: Қолданба ашыла сала алдымен "Үстінен көрсету" рұқсатын сұрау (ЛОГИКА САҚТАЛДЫ)
-        if (!checkOverlayPermission()) {
-            requestOverlayPermission();
-        }
-
         swipeRefreshLayout = new SwipeRefreshLayout(this);
         myWebView = new WebView(this);
         swipeRefreshLayout.addView(myWebView);
@@ -50,15 +39,17 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setDomStorageEnabled(true);
         webSettings.setGeolocationEnabled(true);
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        
+        // ТҮЗЕТУ: Instagram мобильді нұсқасын дұрыс ашуы үшін ресми Chrome мәнін береміз
+        String mobileUserAgent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
+        webSettings.setUserAgentString(mobileUserAgent);
 
         myWebView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
                 super.onPageStarted(view, url, favicon);
 
-                // 2-КЕЗЕҢ: Пайдаланушы нақты бөлімдерге кіргенде рұқсатты шақыру (ЛОГИКА САҚТАЛДЫ)
                 String lowerUrl = url.toLowerCase();
-
                 if (lowerUrl.contains("2gis") || lowerUrl.contains("map") || lowerUrl.contains("yandex") || lowerUrl.contains("navi") || lowerUrl.contains("instagram")) {
                     triggerLocationPermission();
                 }
@@ -109,26 +100,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // СЕН АЙТҚАН ӨЗГЕРІС: Енді localhost емес, бірден Instagram ашылады!
         myWebView.loadUrl("https://www.instagram.com/");
-    }
-
-    // "Үстінен көрсету" рұқсатын тексеру
-    private boolean checkOverlayPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            return Settings.canDrawOverlays(this);
-        }
-        return true;
-    }
-
-    // "Үстінен көрсету" рұқсатын жүйеден сұрау
-    private void requestOverlayPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:" + getPackageName()));
-            startActivityForResult(intent, OVERLAY_REQUEST_CODE);
-            Toast.makeText(this, "Жүйенің тұрақты жұмысы үшін үстінен көрсету рұқсатын беріңіз", Toast.LENGTH_LONG).show();
-        }
     }
 
     private void triggerLocationPermission() {
