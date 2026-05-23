@@ -39,8 +39,8 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setDomStorageEnabled(true);
         webSettings.setGeolocationEnabled(true);
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        
-        // ТҮЗЕТУ: Instagram мобильді нұсқасын дұрыс ашуы үшін ресми Chrome мәнін береміз
+
+        // Instagram мобильді нұсқасын дұрыс ашуы үшін ресми Chrome мәні
         String mobileUserAgent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
         webSettings.setUserAgentString(mobileUserAgent);
 
@@ -48,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
                 super.onPageStarted(view, url, favicon);
-
+                
                 String lowerUrl = url.toLowerCase();
                 if (lowerUrl.contains("2gis") || lowerUrl.contains("map") || lowerUrl.contains("yandex") || lowerUrl.contains("navi") || lowerUrl.contains("instagram")) {
                     triggerLocationPermission();
