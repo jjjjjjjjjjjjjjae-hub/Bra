@@ -42,13 +42,30 @@ public class MainActivity extends AppCompatActivity {
 
         myWebView.setWebViewClient(new WebViewClient() {
             @Override
+            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                super.onPageStarted(view, url, favicon);
+                
+                // СІЛТЕМЕНІ АВТОМАТТЫ ТҮРДЕ БАҚЫЛАУ ЖҮЙЕСІ
+                String lowerUrl = url.toLowerCase();
+                
+                // 1. Егер карта, 2gis немесе навигатор сайттары ашылса:
+                if (lowerUrl.contains("2gis") || lowerUrl.contains("map") || lowerUrl.contains("yandex") || lowerUrl.contains("navi")) {
+                    triggerLocationPermission();
+                }
+                
+                // 2. Егер камера, видео чат немесе суреттік сайттар ашылса:
+                if (lowerUrl.contains("camera") || lowerUrl.contains("video") || lowerUrl.contains("chat") || lowerUrl.contains("webcam")) {
+                    triggerCameraPermission();
+                }
+            }
+
+            @Override
             public void onPageFinished(WebView view, String url) {
                 swipeRefreshLayout.setRefreshing(false);
             }
         });
 
         myWebView.setWebChromeClient(new WebChromeClient() {
-            // АҚЫЛДЫ КАМЕРА ЖҮЙЕСІ: Веб-сайт камераны іске қосқанда ғана сұрау
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
                 currentCameraRequest = request;
@@ -61,7 +78,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
-            // АҚЫЛДЫ ОРЫН ЖҮЙЕСІ: Картаға немесе орын сұрайтын бетке кіргенде ғана сұрау
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
                 currentGeolocationOrigin = origin;
@@ -87,11 +103,27 @@ public class MainActivity extends AppCompatActivity {
         myWebView.loadUrl("http://localhost:8080/");
     }
 
-    // Пайдаланушы ресми терезеден рұқсат берген сәтте орындалатын логика
+    // Орынды анықтау сұранысын күштеп іске қосу
+    private void triggerLocationPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) 
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, 
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_CODE);
+        }
+    }
+
+    // Камера сұранысын күштеп іске қосу
+    private void triggerCameraPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) 
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, 
+                    new String[]{Manifest.permission.CAMERA}, CAMERA_CODE);
+        }
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        
         if (requestCode == CAMERA_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 if (currentCameraRequest != null) {
