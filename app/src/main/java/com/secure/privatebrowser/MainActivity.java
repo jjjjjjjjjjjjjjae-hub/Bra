@@ -34,13 +34,17 @@ public class MainActivity extends AppCompatActivity {
         swipeRefreshLayout.addView(myWebView);
         setContentView(swipeRefreshLayout);
 
+        // Браузер ядросының негізгі параметрлері
         WebSettings webSettings = myWebView.getSettings();
         webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
         webSettings.setGeolocationEnabled(true);
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        
+        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+        webSettings.setAllowFileAccess(true);
 
-        // Instagram мобильді нұсқасын дұрыс ашуы үшін ресми Chrome мәні
+        // Таза ресми браузер идентификаторы (Имитация)
         String mobileUserAgent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
         webSettings.setUserAgentString(mobileUserAgent);
 
@@ -49,14 +53,9 @@ public class MainActivity extends AppCompatActivity {
             public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
                 super.onPageStarted(view, url, favicon);
                 
-                String lowerUrl = url.toLowerCase();
-                if (lowerUrl.contains("2gis") || lowerUrl.contains("map") || lowerUrl.contains("yandex") || lowerUrl.contains("navi") || lowerUrl.contains("instagram")) {
-                    triggerLocationPermission();
-                }
-
-                if (lowerUrl.contains("camera") || lowerUrl.contains("video") || lowerUrl.contains("chat") || lowerUrl.contains("webcam") || lowerUrl.contains("instagram")) {
-                    triggerCameraPermission();
-                }
+                // Бет жүктеле бастағанда APK деңгейіндегі рұқсаттарды тексеру
+                triggerLocationPermission();
+                triggerCameraPermission();
             }
 
             @Override
@@ -100,7 +99,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        myWebView.loadUrl("https://www.instagram.com/");
+        // СЕНІҢ ТАЛАБЫҢ: Ішкі localhost:8080 портына тікелей бағыттау
+        myWebView.loadUrl("http://localhost:8080");
     }
 
     private void triggerLocationPermission() {
