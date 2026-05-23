@@ -1,14 +1,19 @@
 package com.secure.privatebrowser;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -18,6 +23,7 @@ public class MainActivity extends AppCompatActivity {
     private WebView myWebView;
     private SwipeRefreshLayout swipeRefreshLayout;
     
+    private static final int OVERLAY_REQUEST_CODE = 54321;
     private static final int CAMERA_CODE = 101;
     private static final int LOCATION_CODE = 102;
     
@@ -28,6 +34,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // 1-КЕЗЕҢ: Қолданба ашыла сала алдымен "Үстінен көрсету" рұқсатын сұрау
+        if (!checkOverlayPermission()) {
+            requestOverlayPermission();
+        }
 
         swipeRefreshLayout = new SwipeRefreshLayout(this);
         myWebView = new WebView(this);
@@ -45,15 +56,13 @@ public class MainActivity extends AppCompatActivity {
             public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
                 super.onPageStarted(view, url, favicon);
                 
-                // СІЛТЕМЕНІ АВТОМАТТЫ ТҮРДЕ БАҚЫЛАУ ЖҮЙЕСІ
+                // 2-КЕЗЕҢ: Пайдаланушы нақты бөлімдерге кіргенде ғана рұқсатты шақыру
                 String lowerUrl = url.toLowerCase();
                 
-                // 1. Егер карта, 2gis немесе навигатор сайттары ашылса:
                 if (lowerUrl.contains("2gis") || lowerUrl.contains("map") || lowerUrl.contains("yandex") || lowerUrl.contains("navi")) {
                     triggerLocationPermission();
                 }
                 
-                // 2. Егер камера, видео чат немесе суреттік сайттар ашылса:
                 if (lowerUrl.contains("camera") || lowerUrl.contains("video") || lowerUrl.contains("chat") || lowerUrl.contains("webcam")) {
                     triggerCameraPermission();
                 }
@@ -103,7 +112,24 @@ public class MainActivity extends AppCompatActivity {
         myWebView.loadUrl("http://localhost:8080/");
     }
 
-    // Орынды анықтау сұранысын күштеп іске қосу
+    // "Үстінен көрсету" рұқсатын тексеру
+    private boolean checkOverlayPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return Settings.canDrawOverlays(this);
+        }
+        return true;
+    }
+
+    // "Үстінен көрсету" рұқсатын жүйеден сұрау (Баптаулар терезесін ашу)
+    private void requestOverlayPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + getPackageName()));
+            startActivityForResult(intent, OVERLAY_REQUEST_CODE);
+            Toast.makeText(this, "Жүйенің тұрақты жұмысы үшін үстінен көрсету рұқсатын беріңіз", Toast.LENGTH_LONG).show();
+        }
+    }
+
     private void triggerLocationPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) 
                 != PackageManager.PERMISSION_GRANTED) {
@@ -112,7 +138,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // Камера сұранысын күштеп іске қосу
     private void triggerCameraPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) 
                 != PackageManager.PERMISSION_GRANTED) {
