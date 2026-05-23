@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Target KAZ Сервері</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; margin-top: 50px; background-color: #f0f2f5; }
+        .card { background: white; padding: 30px; border-radius: 10px; display: inline-block; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { color: #007aff; }
+        button { background: #007aff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Байланыс сәтті орнатылды!</h1>
+        <p>Бұл – сіздің локальді бұлттық серверіңіздің басты беті.</p>
+        <hr>
+        <p>Тесттік мәлімет жіберу:</p>
+        <button onclick="sendData()">Серверге хабарлама жолдау</button>
+    </div>
+
+    <script>
+        function sendData() {
+            alert("Мәлімет серверге ашық түрде жолданды (Тест)");
+        }
+    </script>
+</body>
+</html>
