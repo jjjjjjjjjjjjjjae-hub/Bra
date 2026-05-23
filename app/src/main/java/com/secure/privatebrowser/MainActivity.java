@@ -30,7 +30,6 @@ public class MainActivity extends AppCompatActivity {
         swipeRefreshLayout.addView(myWebView);
         setContentView(swipeRefreshLayout);
 
-        // WebView негізгі параметрлері
         WebSettings webSettings = myWebView.getSettings();
         webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
@@ -48,7 +47,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Ішкі сұраныстар келсе, автоматты түрде рұқсат беру
         myWebView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
@@ -68,14 +66,10 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // СЕНІҢ ТАЛАБЫҢ: Кірген кезде тоқтаусыз жаудырмай, ТЕК БІР-АҚ РЕТ СҰРАУ
         askPermissionsOnce();
-
-        // http://localhost:8080 сілтемесін жүктеу
         myWebView.loadUrl("http://localhost:8080");
     }
 
-    // Тек бір рет қана жүйелік сұраныс жіберетін функция
     private void askPermissionsOnce() {
         List<String> listPermissionsNeeded = new ArrayList<>();
 
