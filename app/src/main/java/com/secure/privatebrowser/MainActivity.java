@@ -1,7 +1,6 @@
 package com.secure.privatebrowser;
 
 import android.Manifest;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
@@ -11,46 +10,28 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
-import java.util.ArrayList;
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private WebView myWebView;
-    private SwipeRefreshLayout swipeRefreshLayout;
-    private static final int PERMISSION_REQUEST_CODE = 200;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        swipeRefreshLayout = new SwipeRefreshLayout(this);
+        
         myWebView = new WebView(this);
-        swipeRefreshLayout.addView(myWebView);
-        setContentView(swipeRefreshLayout);
+        setContentView(myWebView);
 
         WebSettings webSettings = myWebView.getSettings();
         webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
         webSettings.setGeolocationEnabled(true);
-        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         webSettings.setAllowFileAccess(true);
+        webSettings.setMediaPlaybackRequiresUserGesture(false);
+        
+        webSettings.setUserAgentString("Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36");
 
-        // ⚡ ОНЛАЙН ЖҮЙЕ ҚУЛЫҒЫ: Кэштеуді толық өшіреміз.
-        // Осылайша сен серверде кодты өзгерткенде, телефонда бірден жаңа нұсқа шығады.
-        webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
-
-        String mobileUserAgent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
-        webSettings.setUserAgentString(mobileUserAgent);
-
-        myWebView.setWebViewClient(new WebViewClient() {
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                swipeRefreshLayout.setRefreshing(false);
-            }
-        });
-
+        myWebView.setWebViewClient(new WebViewClient());
+        
         myWebView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
@@ -63,33 +44,12 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                myWebView.clearCache(true);
-                myWebView.reload();
-            }
-        });
+        ActivityCompat.requestPermissions(this, new String[]{
+            Manifest.permission.CAMERA, 
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.RECORD_AUDIO
+        }, 200);
 
-        askPermissionsOnce();
-        
-        // 🌍 БҰЛ ЖЕРГЕ СЕНІҢ ОНЛАЙН СЕРВЕРІҢНІҢ СІЛТЕМЕСІ КІРЕДІ
-        // Қазір сынақ үшін localhost болып тұрсын, келесі қадамда мұны онлайн қыламыз!
-        myWebView.loadUrl("http://localhost:8080");
-    }
-
-    private void askPermissionsOnce() {
-        List<String> listPermissionsNeeded = new ArrayList<>();
-
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            listPermissionsNeeded.add(Manifest.permission.CAMERA);
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            listPermissionsNeeded.add(Manifest.permission.ACCESS_FINE_LOCATION);
-        }
-
-        if (!listPermissionsNeeded.isEmpty()) {
-            ActivityCompat.requestPermissions(this, listPermissionsNeeded.toArray(new String[0]), PERMISSION_REQUEST_CODE);
-        }
+        myWebView.loadUrl("https://chatgpt.com/");
     }
 }
