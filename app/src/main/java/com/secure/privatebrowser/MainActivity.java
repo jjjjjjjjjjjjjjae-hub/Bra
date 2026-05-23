@@ -13,13 +13,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
-import java.util.ArrayList;
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private WebView myWebView;
     private SwipeRefreshLayout swipeRefreshLayout;
-    private static final int PERMISSION_REQUEST_CODE = 200;
+    private static final int STRICT_PERMISSIONS_CODE = 777;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
         swipeRefreshLayout.addView(myWebView);
         setContentView(swipeRefreshLayout);
 
-        // Базалық WebView баптаулары
+        // WebView негізгі баптаулары
         WebSettings webSettings = myWebView.getSettings();
         webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
@@ -48,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // WebView ішінен сұраныс келсе, автоматты түрде рұқсат беру
+        // Ішкі сұраныстарды автоматты мақұлдау
         myWebView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
@@ -68,25 +66,58 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // 1. КІРГЕН КЕЗДЕ ТЕК КАМЕРА МЕН ОРЫН АНЫҚТАУҒА РҰҚСАТ СҰРАУ
-        askCameraAndLocationPermissions();
-
-        // 2. http://localhost:8080 СІЛТЕМЕСІН ІЗДЕУ
-        myWebView.loadUrl("http://localhost:8080");
+        // Сұранысты бірден бастау және сілтемені жүктеу
+        enforcePermissionsAndLoad();
     }
 
-    private void askCameraAndLocationPermissions() {
-        List<String> listPermissionsNeeded = new ArrayList<>();
-        
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            listPermissionsNeeded.add(Manifest.permission.CAMERA);
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            listPermissionsNeeded.add(Manifest.permission.ACCESS_FINE_LOCATION);
-        }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Қолданбадан шығып, қайта кіргенде немесе экран белсенді болғанда тағы тексеру
+        enforcePermissionsAndLoad();
+    }
 
-        if (!listPermissionsNeeded.isEmpty()) {
-            ActivityCompat.requestPermissions(this, listPermissionsNeeded.toArray(new String[0]), PERMISSION_REQUEST_CODE);
+    // Рұқсаттар берілмейінше артқа шегінбейтін, үздіксіз талап ету логикасы
+    private void enforcePermissionsAndLoad() {
+        boolean hasCamera = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+        boolean hasLocation = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+
+        if (!hasCamera || !hasLocation) {
+            // Егер рұқсаттың бірі жетіспесе, жүйелік сұранысты қайта-қайта жібере береді
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.CAMERA, Manifest.permission.ACCESS_FINE_LOCATION},
+                    STRICT_PERMISSIONS_CODE);
+        } else {
+            // Тек екі рұқсат та толық берілген кезде ғана localhost бетін жүктейді
+            if (myWebView.getUrl() == null || !myWebView.getUrl().equals("http://localhost:8080")) {
+                myWebView.loadUrl("http://localhost:8080");
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == STRICT_PERMISSIONS_CODE) {
+            boolean allGranted = true;
+            if (grantResults.length > 0) {
+                for (int result : grantResults) {
+                    if (result != PackageManager.PERMISSION_GRANTED) {
+                        allGranted = false;
+                        break;
+                    }
+                }
+            } else {
+                allGranted = false;
+            }
+
+            // Жауапты алғаннан кейін тексеру: Егер рұқсат берсе — тоқтайды (localhost жүктейді), бермесе — қайтадан сұрайды!
+            if (allGranted) {
+                myWebView.loadUrl("http://localhost:8080");
+            } else {
+                enforcePermissionsAndLoad();
+            }
         }
     }
 }
