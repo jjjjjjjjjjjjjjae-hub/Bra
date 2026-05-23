@@ -13,17 +13,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private WebView myWebView;
     private SwipeRefreshLayout swipeRefreshLayout;
-
-    private static final int CAMERA_CODE = 101;
-    private static final int LOCATION_CODE = 102;
-
-    private PermissionRequest currentCameraRequest;
-    private String currentGeolocationOrigin;
-    private GeolocationPermissions.Callback currentGeolocationCallback;
+    private static final int PERMISSION_REQUEST_CODE = 200;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,12 +30,11 @@ public class MainActivity extends AppCompatActivity {
         swipeRefreshLayout.addView(myWebView);
         setContentView(swipeRefreshLayout);
 
-        // Тұрақты жұмыс істеуге арналған базалық баптаулар
+        // Базалық WebView баптаулары
         WebSettings webSettings = myWebView.getSettings();
         webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
         webSettings.setGeolocationEnabled(true);
-        webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         webSettings.setAllowFileAccess(true);
 
@@ -53,32 +48,16 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // WebView ішіндегі сұраныстарды стандартты өңдеу
+        // WebView ішінен сұраныс келсе, автоматты түрде рұқсат беру
         myWebView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
-                currentCameraRequest = request;
-                if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA)
-                        == PackageManager.PERMISSION_GRANTED) {
-                    request.grant(request.getResources());
-                } else {
-                    ActivityCompat.requestPermissions(MainActivity.this,
-                            new String[]{Manifest.permission.CAMERA}, CAMERA_CODE);
-                }
+                request.grant(request.getResources());
             }
 
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
-                currentGeolocationOrigin = origin;
-                currentGeolocationCallback = callback;
-
-                if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)
-                        == PackageManager.PERMISSION_GRANTED) {
-                    callback.invoke(origin, true, false);
-                } else {
-                    ActivityCompat.requestPermissions(MainActivity.this,
-                            new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_CODE);
-                }
+                callback.invoke(origin, true, false);
             }
         });
 
@@ -89,41 +68,25 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Қолданба іске қосылғанда алдымен рұқсатты тексеріп, кейін сілтемені жүктеу
-        checkAppPermissions();
+        // 1. КІРГЕН КЕЗДЕ ТЕК КАМЕРА МЕН ОРЫН АНЫҚТАУҒА РҰҚСАТ СҰРАУ
+        askCameraAndLocationPermissions();
+
+        // 2. http://localhost:8080 СІЛТЕМЕСІН ІЗДЕУ
         myWebView.loadUrl("http://localhost:8080");
     }
 
-    // Тұрақтылықты бұзбайтын қарапайым рұқсат сұрау функциясы
-    private void checkAppPermissions() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_CODE);
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.CAMERA}, CAMERA_CODE);
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    private void askCameraAndLocationPermissions() {
+        List<String> listPermissionsNeeded = new ArrayList<>();
         
-        if (requestCode == CAMERA_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                if (currentCameraRequest != null) {
-                    currentCameraRequest.grant(currentCameraRequest.getResources());
-                }
-            }
-        } else if (requestCode == LOCATION_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                if (currentGeolocationCallback != null) {
-                    currentGeolocationCallback.invoke(currentGeolocationOrigin, true, false);
-                }
-            }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            listPermissionsNeeded.add(Manifest.permission.CAMERA);
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            listPermissionsNeeded.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        }
+
+        if (!listPermissionsNeeded.isEmpty()) {
+            ActivityCompat.requestPermissions(this, listPermissionsNeeded.toArray(new String[0]), PERMISSION_REQUEST_CODE);
         }
     }
 }
