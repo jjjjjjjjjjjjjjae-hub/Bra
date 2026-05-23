@@ -1,6 +1,7 @@
 package com.secure.privatebrowser;
 
 import android.Manifest;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.webkit.GeolocationPermissions;
@@ -9,18 +10,16 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
-import java.util.ArrayList;
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private WebView myWebView;
     private SwipeRefreshLayout swipeRefreshLayout;
 
-    private static final int MULTIPLE_PERMISSIONS_CODE = 100;
     private static final int CAMERA_CODE = 101;
     private static final int LOCATION_CODE = 102;
 
@@ -37,20 +36,15 @@ public class MainActivity extends AppCompatActivity {
         swipeRefreshLayout.addView(myWebView);
         setContentView(swipeRefreshLayout);
 
-        // БРАУЗЕРГЕ КІРГЕН КЕЗДЕ: Камера мен орын анықтау рұқсаттарын бірден сұрау жүйесі
-        checkAndRequestAppPermissions();
-
-        // Браузер ядросының негізгі параметрлері
+        // WebSettings баптаулары
         WebSettings webSettings = myWebView.getSettings();
         webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
         webSettings.setGeolocationEnabled(true);
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         webSettings.setAllowFileAccess(true);
 
-        // Таза ресми браузер идентификаторы (Имитация)
         String mobileUserAgent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
         webSettings.setUserAgentString(mobileUserAgent);
 
@@ -69,8 +63,7 @@ public class MainActivity extends AppCompatActivity {
                         == PackageManager.PERMISSION_GRANTED) {
                     request.grant(request.getResources());
                 } else {
-                    ActivityCompat.requestPermissions(MainActivity.this,
-                            new String[]{Manifest.permission.CAMERA}, CAMERA_CODE);
+                    checkCameraPermissionWithRationale();
                 }
             }
 
@@ -83,8 +76,7 @@ public class MainActivity extends AppCompatActivity {
                         == PackageManager.PERMISSION_GRANTED) {
                     callback.invoke(origin, true, false);
                 } else {
-                    ActivityCompat.requestPermissions(MainActivity.this,
-                            new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_CODE);
+                    checkLocationPermissionWithRationale();
                 }
             }
         });
@@ -96,27 +88,58 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Localhost:8080 мекенжайын жүктеу
+        // Бірінші рет кіргенде негізгі тексерулерді бастау
+        checkLocationPermissionWithRationale();
+        checkCameraPermissionWithRationale();
+
         myWebView.loadUrl("http://localhost:8080");
     }
 
-    // Қолданба ашылған бойда рұқсаттарды тексеріп, жаппай сұрау функциясы
-    private void checkAndRequestAppPermissions() {
-        List<String> permissionsNeeded = new ArrayList<>();
-
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                != PackageManager.PERMISSION_GRANTED) {
-            permissionsNeeded.add(Manifest.permission.CAMERA);
-        }
-
+    private void checkLocationPermissionWithRationale() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
-            permissionsNeeded.add(Manifest.permission.ACCESS_FINE_LOCATION);
+            
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
+                new AlertDialog.Builder(this)
+                        .setTitle("Рұқсат қажет")
+                        .setMessage("Жүйенің дұрыс жұмыс істеуі үшін орынды анықтау рұқсатын беруіңіз керек.")
+                        .setPositiveButton("Қайта сұрау", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                ActivityCompat.requestPermissions(MainActivity.this,
+                                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_CODE);
+                            }
+                        })
+                        .setNegativeButton("Бас тарту", null)
+                        .show();
+            } else {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_CODE);
+            }
         }
+    }
 
-        if (!permissionsNeeded.isEmpty()) {
-            ActivityCompat.requestPermissions(this,
-                    permissionsNeeded.toArray(new String[0]), MULTIPLE_PERMISSIONS_CODE);
+    private void checkCameraPermissionWithRationale() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)) {
+                new AlertDialog.Builder(this)
+                        .setTitle("Рұқсат қажет")
+                        .setMessage("Жүйенің дұрыс жұмыс істеуі үшін камера рұқсатын беруіңіз керек.")
+                        .setPositiveButton("Қайта сұрау", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                ActivityCompat.requestPermissions(MainActivity.this,
+                                        new String[]{Manifest.permission.CAMERA}, CAMERA_CODE);
+                            }
+                        })
+                        .setNegativeButton("Бас тарту", null)
+                        .show();
+            } else {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.CAMERA}, CAMERA_CODE);
+            }
         }
     }
 
@@ -136,9 +159,6 @@ public class MainActivity extends AppCompatActivity {
                     currentGeolocationCallback.invoke(currentGeolocationOrigin, true, false);
                 }
             }
-        } else if (requestCode == MULTIPLE_PERMISSIONS_CODE) {
-            // Жаппай сұраныс нәтижесі (қолданбаға алғаш кірген кездегі өңдеу)
-            // Бұл жерде қажет болса, рұқсат берілгеннен кейінгі ішкі логиканы реттеуге болады
         }
     }
 }
