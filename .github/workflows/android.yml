@@ -19,15 +19,11 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # Тұрақты әрі үйлесімді Gradle 8.4 нұсқасын күштеп орнату
-    - name: Setup Android Compatible Gradle 8.4
-      run: |
-        if [ ! -f "gradlew" ]; then
-          echo "[!] gradlew жоқ. Тұрақты Gradle 8.4 нұсқасы құрылуда..."
-          gradle wrapper --gradle-version 8.4
-        else
-          chmod +x gradlew
-        fi
+    # Тікелей ресми Gradle Action арқылы 8.4 тұрақты нұсқасын бұлтқа орнату
+    - name: Setup Gradle 8.4 Environment
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.4'
 
     # Қолданбаның атын "Chat GPT" деп өзгерту
     - name: Configure App Name
@@ -39,7 +35,7 @@ jobs:
         </resources>
         INNER_EOF
 
-    # Суретті басты белгішеге (иконкаға) ауыстыру
+    # Фотоны басты белгішеге (иконкаға) ауыстыру
     - name: Setup App Icon from Project Photo
       run: |
         mkdir -p app/src/main/res/mipmap-hdpi
@@ -60,13 +56,13 @@ jobs:
             echo "[-] Сурет табылмады, стандартты белгіше қалады."
         fi
 
-    # Қолданбаны жинақтау
+    # Нақты осы ресми құрал арқылы қолданбаны жинақтау
     - name: Build with Gradle
-      run: ./gradlew assembleDebug
+      run: gradle assembleDebug
 
-    # APK-ны бұлтқа жүктеу
+    # APK-ны бұлтқа жүктеу (V4)
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: chat-gpt-apk
-        path: app/build/outputs/apk/debug/app-debug.apk
+        path: "**/build/outputs/apk/debug/*.apk"
