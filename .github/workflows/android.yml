@@ -19,63 +19,68 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # Ресми Gradle Action арқылы тұрақты 8.4 ортасын орнату
+    # Тұрақты 8.4 Gradle ортасын баптау
     - name: Setup Gradle 8.4 Environment
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.4'
 
-    # 1. Қолданбаның ішкі атын "Chat GPT" деп жазу
+    # 1. Жоба ішіндегі барлық AndroidManifest.xml файлдарын тауып, аты мен белгішесін патчтау
+    - name: Patch Android Manifest and Find Resources
+      run: |
+        MANIFEST_PATH=$(find . -name AndroidManifest.xml -not -path "*/build/*" -print -quit)
+        if [ -n "$MANIFEST_PATH" ]; then
+          echo "[+] Манифест табылды: $MANIFEST_PATH"
+          sed -i 's/android:label="[^"]*"/android:label="@string\/app_name"/g' "$MANIFEST_PATH"
+          sed -i 's/android:icon="[^"]*"/android:icon="@mipmap\/ic_launcher"/g' "$MANIFEST_PATH"
+          
+          # Нақты res (ресурс) папкасының орнын анықтап, оны келесі қадамдар үшін сақтаймыз
+          RES_DIR=$(dirname "$MANIFEST_PATH")/res
+          echo "RES_DIR=$RES_DIR" >> $GITHUB_ENV
+          echo "[+] Ресурс папкасы анықталды: $RES_DIR"
+        else
+          echo "[-] Error: Манифест файлы табылмады!"
+          exit 1
+        fi
+
+    # 2. Қолданбаның ішкі атын "Chat GPT" деп нақты папкаға жазу
     - name: Configure App Name Strings
       run: |
-        mkdir -p app/src/main/res/values
-        cat << 'INNER_EOF' > app/src/main/res/values/strings.xml
+        mkdir -p "${{ env.RES_DIR }}/values"
+        cat << 'INNER_EOF' > "${{ env.RES_DIR }}/values/strings.xml"
         <resources>
             <string name="app_name">Chat GPT</string>
         </resources>
         INNER_EOF
 
-    # 2. Android Manifest файлын күштеп жаңа ат пен белгішеге баптау
-    - name: Patch Android Manifest
-      run: |
-        MANIFEST_PATH=$(find . -name AndroidManifest.xml -print -quit)
-        if [ -n "$MANIFEST_PATH" ]; then
-          echo "[+] AndroidManifest.xml табылды: $MANIFEST_PATH"
-          # Манифест ішіндегі android:label және android:icon параметрлерін біздің жаңа мәндерге ауыстыру
-          sed -i 's/android:label="[^"]*"/android:label="@string\/app_name"/g' "$MANIFEST_PATH"
-          sed -i 's/android:icon="[^"]*"/android:icon="@mipmap\/ic_launcher"/g' "$MANIFEST_PATH"
-          echo "[+] Манифест файл сәтті патчталды."
-        else
-          echo "[-] Error: AndroidManifest.xml табылмады!"
-        fi
-
-    # 3. Суретті барлық форматтағы иконка папкаларына басты белгіше етіп көшіру
+    # 3. Суретті дәл осы анықталған ресурс папкасының ішіне көшіру (Ресурс байланысын түзету)
     - name: Setup App Icon from Project Photo
       run: |
-        mkdir -p app/src/main/res/mipmap-hdpi
-        mkdir -p app/src/main/res/mipmap-mdpi
-        mkdir -p app/src/main/res/mipmap-xhdpi
-        mkdir -p app/src/main/res/mipmap-xxhdpi
-        mkdir -p app/src/main/res/mipmap-xxxhdpi
+        mkdir -p "${{ env.RES_DIR }}/mipmap-hdpi"
+        mkdir -p "${{ env.RES_DIR }}/mipmap-mdpi"
+        mkdir -p "${{ env.RES_DIR }}/mipmap-xhdpi"
+        mkdir -p "${{ env.RES_DIR }}/mipmap-xxhdpi"
+        mkdir -p "${{ env.RES_DIR }}/mipmap-xxxhdpi"
         
-        if ls *.jpg 1> /dev/null 2>&1; then
-            IMG_FILE=$(ls *.jpg | head -n 1)
-            # Суретті дұрыс атаумен және PNG форматымен барлық өлшемдерге көшіру
-            cp -f "$IMG_FILE" app/src/main/res/mipmap-hdpi/ic_launcher.png
-            cp -f "$IMG_FILE" app/src/main/res/mipmap-mdpi/ic_launcher.png
-            cp -f "$IMG_FILE" app/src/main/res/mipmap-xhdpi/ic_launcher.png
-            cp -f "$IMG_FILE" app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-            cp -f "$IMG_FILE" app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-            echo "[+] Иконка суреті сәтті ауыстырылған файл: $IMG_FILE"
+        # Репозиторийдегі кез келген .jpg фотоны тауып алып, иконка папкаларына тарату
+        IMG_FILE=$(find . -maxdepth 2 -name "*.jpg" -not -path "*/.*" -print -quit)
+        if [ -n "$IMG_FILE" ]; then
+            echo "[+] Табылған сурет көшірілуде: $IMG_FILE"
+            cp -f "$IMG_FILE" "${{ env.RES_DIR }}/mipmap-hdpi/ic_launcher.png"
+            cp -f "$IMG_FILE" "${{ env.RES_DIR }}/mipmap-mdpi/ic_launcher.png"
+            cp -f "$IMG_FILE" "${{ env.RES_DIR }}/mipmap-xhdpi/ic_launcher.png"
+            cp -f "$IMG_FILE" "${{ env.RES_DIR }}/mipmap-xxhdpi/ic_launcher.png"
+            cp -f "$IMG_FILE" "${{ env.RES_DIR }}/mipmap-xxxhdpi/ic_launcher.png"
+            echo "[+] Иконка файлдары сәтті орналастырылды."
         else
-            echo "[-] Папкада .jpg форматты сурет табылмады!"
+            echo "[!] Назар аударыңыз: Локальді папкада .jpg сурет табылмады, стандартты иконка қалуы мүмкін."
         fi
 
     # 4. Қолданбаны жинақтау
     - name: Build with Gradle
       run: gradle assembleDebug
 
-    # 5. APK-ны бұлтқа "chat-gpt.apk" деген нақты атаумен жүктеу
+    # 5. APK-ны бұлтқа жүктеу
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
