@@ -43,12 +43,10 @@ jobs:
     # 2. Манифестті тазалап, жаңа атау мен белгішелерді КҮШТЕП кіргізу
     - name: Force Patch Android Manifest
       run: |
-        # Ескі icon және roundIcon параметрлерін толық өшіріп тастау (қате шықпас үшін)
         sed -i 's/android:icon="[^"]*"//g' "${{ env.MANIFEST_PATH }}"
         sed -i 's/android:roundIcon="[^"]*"//g' "${{ env.MANIFEST_PATH }}"
         sed -i 's/android:label="[^"]*"//g' "${{ env.MANIFEST_PATH }}"
         
-        # <application тегінің ішіне біздің жаңа баптауларды нақты қосу
         sed -i 's/<application/<application android:label="@string\/app_name" android:icon="@mipmap\/ic_launcher" android:roundIcon="@mipmap\/ic_launcher"/g' "${{ env.MANIFEST_PATH }}"
         echo "[+] Манифест толықтай күштеп патчталды."
 
@@ -62,30 +60,33 @@ jobs:
         </resources>
         INNER_EOF
 
-    # 4. Ескі иконкаларды тазалап, жаңа .jpg фотоны басты белгіше ету
+    # 4. Нақты logo/ папкасындағы PNG суретті басты белгіше ету
     - name: Setup App Icon from Project Photo
       run: |
-        # Ескі барлық ic_launcher файлдарын жою (конфликт болмауы үшін)
+        # Ескі белгішелерді тазалау
         find "${{ env.RES_DIR }}" -name "ic_launcher*" -delete
         
-        # Жаңа папкаларды құру
+        # Жаңа mipmap папкаларын ашу
         mkdir -p "${{ env.RES_DIR }}/mipmap-hdpi"
         mkdir -p "${{ env.RES_DIR }}/mipmap-mdpi"
         mkdir -p "${{ env.RES_DIR }}/mipmap-xhdpi"
         mkdir -p "${{ env.RES_DIR }}/mipmap-xxhdpi"
         mkdir -p "${{ env.RES_DIR }}/mipmap-xxxhdpi"
         
-        # Локальді папкадағы .jpg фотоны тауып көшіру
-        IMG_FILE=$(find . -maxdepth 2 -name "*.jpg" -not -path "*/.*" -print -quit)
-        if [ -n "$IMG_FILE" ]; then
-            cp -f "$IMG_FILE" "${{ env.RES_DIR }}/mipmap-hdpi/ic_launcher.png"
-            cp -f "$IMG_FILE" "${{ env.RES_DIR }}/mipmap-mdpi/ic_launcher.png"
-            cp -f "$IMG_FILE" "${{ env.RES_DIR }}/mipmap-xhdpi/ic_launcher.png"
-            cp -f "$IMG_FILE" "${{ env.RES_DIR }}/mipmap-xxhdpi/ic_launcher.png"
-            cp -f "$IMG_FILE" "${{ env.RES_DIR }}/mipmap-xxxhdpi/ic_launcher.png"
-            echo "[+] Жаңа иконка файлдары сәтті жазылды: $IMG_FILE"
+        # Нақты көрсетілген логотип файлын анықтау
+        TARGET_IMG="logo/chat gpt logo.png"
+        
+        if [ -f "$TARGET_IMG" ]; then
+            echo "[+] Логотип табылды, көшіру басталды: $TARGET_IMG"
+            cp -f "$TARGET_IMG" "${{ env.RES_DIR }}/mipmap-hdpi/ic_launcher.png"
+            cp -f "$TARGET_IMG" "${{ env.RES_DIR }}/mipmap-mdpi/ic_launcher.png"
+            cp -f "$TARGET_IMG" "${{ env.RES_DIR }}/mipmap-xhdpi/ic_launcher.png"
+            cp -f "$TARGET_IMG" "${{ env.RES_DIR }}/mipmap-xxhdpi/ic_launcher.png"
+            cp -f "$TARGET_IMG" "${{ env.RES_DIR }}/mipmap-xxxhdpi/ic_launcher.png"
+            echo "[+] Иконка файлдары сәтті жаңартылды."
         else
-            echo "[!] .jpg сурет табылмады!"
+            echo "[-] Төтенше жағдай: $TARGET_IMG файлы табылмады!"
+            exit 1
         fi
 
     # 5. Қолданбаны жинақтау
