@@ -18,63 +18,54 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: gradle
 
-    # Автоматты түрде gradlew файлының қай папкада екенін анықтау
-    - name: Find Gradle Root and Grant Execute Permissions
+    # Репозиторийде gradlew болмаса, бұлтта жаңадан генерациялау
+    - name: Initialize Gradle Wrapper if Missing
       run: |
-        GRADLE_PATH=$(find . -name gradlew -print -quit)
-        if [ -z "$GRADLE_PATH" ]; then
-          echo "Error: gradlew файлы репозиторийден мүлдем табылмады!"
-          exit 1
+        if [ ! -f "gradlew" ]; then
+          echo "[!] gradlew файлы жоқ. Жаңадан құрылуда..."
+          gradle wrapper
         fi
-        echo "GRADLE_DIR=$(dirname "$GRADLE_PATH")" >> $GITHUB_ENV
-        chmod +x "$GRADLE_PATH"
-        echo "[+] gradlew табылды және іске қосу рұқсаты берілді: $GRADLE_PATH"
+        chmod +x gradlew
 
-    # 1. Қолданбаның атын "Chat GPT" деп өзгерту
+    # Қолданбаның атын "Chat GPT" деп өзгерту
     - name: Configure App Name
       run: |
-        TARGET_RES="${{ env.GRADLE_DIR }}/app/src/main/res"
-        mkdir -p "$TARGET_RES/values"
-        cat << 'INNER_EOF' > "$TARGET_RES/values/strings.xml
+        mkdir -p app/src/main/res/values
+        cat << 'INNER_EOF' > app/src/main/res/values/strings.xml
         <resources>
             <string name="app_name">Chat GPT</string>
         </resources>
         INNER_EOF
 
-    # 2. Жоба ішіндегі .jpg фотоны басты белгіше етіп көшіру
+    # Тұрған суретті (.jpg) басты иконкаға айналдыру
     - name: Setup App Icon from Project Photo
       run: |
-        TARGET_RES="${{ env.GRADLE_DIR }}/app/src/main/res"
-        mkdir -p "$TARGET_RES/mipmap-hdpi"
-        mkdir -p "$TARGET_RES/mipmap-mdpi"
-        mkdir -p "$TARGET_RES/mipmap-xhdpi"
-        mkdir -p "$TARGET_RES/mipmap-xxhdpi"
-        mkdir -p "$TARGET_RES/mipmap-xxxhdpi"
+        mkdir -p app/src/main/res/mipmap-hdpi
+        mkdir -p app/src/main/res/mipmap-mdpi
+        mkdir -p app/src/main/res/mipmap-xhdpi
+        mkdir -p app/src/main/res/mipmap-xxhdpi
+        mkdir -p app/src/main/res/mipmap-xxxhdpi
         
-        # Репозиторийдегі кез келген суретті иконкаға айналдыру
         if ls *.jpg 1> /dev/null 2>&1; then
             IMG_FILE=$(ls *.jpg | head -n 1)
-            cp -f "$IMG_FILE" "$TARGET_RES/mipmap-hdpi/ic_launcher.png"
-            cp -f "$IMG_FILE" "$TARGET_RES/mipmap-mdpi/ic_launcher.png"
-            cp -f "$IMG_FILE" "$TARGET_RES/mipmap-xhdpi/ic_launcher.png"
-            cp -f "$IMG_FILE" "$TARGET_RES/mipmap-xxhdpi/ic_launcher.png"
-            cp -f "$IMG_FILE" "$TARGET_RES/mipmap-xxxhdpi/ic_launcher.png"
-            echo "[+] Сурет ($IMG_FILE) сәтті басты иконкаға ауыстырылды."
+            cp -f "$IMG_FILE" app/src/main/res/mipmap-hdpi/ic_launcher.png
+            cp -f "$IMG_FILE" app/src/main/res/mipmap-mdpi/ic_launcher.png
+            cp -f "$IMG_FILE" app/src/main/res/mipmap-xhdpi/ic_launcher.png
+            cp -f "$IMG_FILE" app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+            cp -f "$IMG_FILE" app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+            echo "[+] Иконка ауыстырылды: $IMG_FILE"
         else
-            echo "[-] .jpg сурет табылмады, стандартты белгіше қалады."
+            echo "[-] Сурет табылмады, стандартты белгіше қалады."
         fi
 
-    # 3. Анықталған папкада Gradle арқылы құрастыру
+    # Қолданбаны жинақтау
     - name: Build with Gradle
-      run: |
-        cd ${{ env.GRADLE_DIR }}
-        ./gradlew assembleDebug
+      run: ./gradlew assembleDebug
 
-    # 4. Дайын болған APK файлын бұлтқа жүктеу (V4)
+    # Дайын APK-ны бұлтқа жүктеу (V4 нұсқасы)
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: chat-gpt-apk
-        path: "**/build/outputs/apk/debug/app-debug.apk"
+        path: app/build/outputs/apk/debug/app-debug.apk
