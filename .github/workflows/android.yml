@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: set up JDK 17
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
@@ -23,8 +23,8 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    # 1. Қолданбаның атын "Chat GPT" деп өзгерту және ресурстарды реттеу
-    - name: Configure App Name and Strings
+    # 1. Қолданбаның атын "Chat GPT" деп өзгерту
+    - name: Configure App Name
       run: |
         mkdir -p app/src/main/res/values
         cat << 'INNER_EOF' > app/src/main/res/values/strings.xml
@@ -33,26 +33,33 @@ jobs:
         </resources>
         INNER_EOF
 
-    # 2. Негізгі папкадағы фотоны қолданбаның басты иконкасы ретінде көшіру
+    # 2. Жоба ішіндегі нақты суретті иконка папкаларына басты белгіше етіп көшіру
     - name: Setup App Icon from Project Photo
       run: |
-        # Егер жобада кез келген .jpg немесе .png сурет болса, оны басты иконка ретінде mipmap папкаларына таратамыз
-        mkdir -p app/src/main/res/mipmap-mdpi
         mkdir -p app/src/main/res/mipmap-hdpi
+        mkdir -p app/src/main/res/mipmap-mdpi
         mkdir -p app/src/main/res/mipmap-xhdpi
         mkdir -p app/src/main/res/mipmap-xxhdpi
         mkdir -p app/src/main/res/mipmap-xxxhdpi
         
-        # index.html немесе жоба ішіндегі Kaspi стиліндегі фотоны/суретті ic_launcher.png ретінде қолдану
-        # (Егер нақты сурет файлы болса, соны көшіреді, болмаса қате бермей өткізеді)
-        cp -f *.jpg app/src/main/res/mipmap-hdpi/ic_launcher.jpg 2>/dev/null || true
-        cp -f *.png app/src/main/res/mipmap-hdpi/ic_launcher.png 2>/dev/null || true
+        # Папка ішіндегі кез келген .jpg суретті (мысалы 23343.jpg немесе 23353.jpg) ресми ic_launcher.png белгішесіне айналдырып көшіреміз
+        if ls *.jpg 1> /dev/null 2>&1; then
+            cp -f $(ls *.jpg | head -n 1) app/src/main/res/mipmap-hdpi/ic_launcher.png
+            cp -f $(ls *.jpg | head -n 1) app/src/main/res/mipmap-mdpi/ic_launcher.png
+            cp -f $(ls *.jpg | head -n 1) app/src/main/res/mipmap-xhdpi/ic_launcher.png
+            cp -f $(ls *.jpg | head -n 1) app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+            cp -f $(ls *.jpg | head -n 1) app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+            echo "[+] Сурет сәтті басты иконкаға ауыстырылды."
+        else
+            echo "[-] Папка ішінде .jpg сурет табылмады, стандартты белгіше қалады."
+        fi
 
     - name: Build with Gradle
       run: ./gradlew assembleDebug
 
+    # 3. Қате бермейтін ең жаңа V4 нұсқасын қолдану
     - name: Upload APK Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: chat-gpt-apk
         path: app/build/outputs/apk/debug/app-debug.apk
