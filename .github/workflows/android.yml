@@ -19,7 +19,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # Тікелей ресми Gradle Action арқылы 8.4 тұрақты нұсқасын бұлтқа орнату
+    # Тікелей ресми Gradle Action арқылы 8.4 нұсқасын бұлтқа орнату және іске қосу
     - name: Setup Gradle 8.4 Environment
       uses: gradle/actions/setup-gradle@v3
       with:
@@ -56,7 +56,7 @@ jobs:
             echo "[-] Сурет табылмады, стандартты белгіше қалады."
         fi
 
-    # Нақты осы ресми құрал арқылы қолданбаны жинақтау
+    # Қолданбаны жинақтау (Таза бұлттық gradle арқылы)
     - name: Build with Gradle
       run: gradle assembleDebug
 
