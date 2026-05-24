@@ -19,31 +19,40 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # Тұрақты 8.4 Gradle ортасын баптау
+    # Тұрақты 8.4 Gradle ортасын орнату
     - name: Setup Gradle 8.4 Environment
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.4'
 
-    # 1. Жоба ішіндегі барлық AndroidManifest.xml файлдарын тауып, аты мен белгішесін патчтау
-    - name: Patch Android Manifest and Find Resources
+    # 1. Ресурс папкасы мен Манифест орнын нақты анықтау
+    - name: Locate Android Resources
       run: |
         MANIFEST_PATH=$(find . -name AndroidManifest.xml -not -path "*/build/*" -print -quit)
         if [ -n "$MANIFEST_PATH" ]; then
-          echo "[+] Манифест табылды: $MANIFEST_PATH"
-          sed -i 's/android:label="[^"]*"/android:label="@string\/app_name"/g' "$MANIFEST_PATH"
-          sed -i 's/android:icon="[^"]*"/android:icon="@mipmap\/ic_launcher"/g' "$MANIFEST_PATH"
-          
-          # Нақты res (ресурс) папкасының орнын анықтап, оны келесі қадамдар үшін сақтаймыз
           RES_DIR=$(dirname "$MANIFEST_PATH")/res
           echo "RES_DIR=$RES_DIR" >> $GITHUB_ENV
-          echo "[+] Ресурс папкасы анықталды: $RES_DIR"
+          echo "MANIFEST_PATH=$MANIFEST_PATH" >> $GITHUB_ENV
+          echo "[+] Манифест: $MANIFEST_PATH"
+          echo "[+] Ресурс папкасы: $RES_DIR"
         else
-          echo "[-] Error: Манифест файлы табылмады!"
+          echo "[-] Error: Манифест табылмады!"
           exit 1
         fi
 
-    # 2. Қолданбаның ішкі атын "Chat GPT" деп нақты папкаға жазу
+    # 2. Манифестті тазалап, жаңа атау мен белгішелерді КҮШТЕП кіргізу
+    - name: Force Patch Android Manifest
+      run: |
+        # Ескі icon және roundIcon параметрлерін толық өшіріп тастау (қате шықпас үшін)
+        sed -i 's/android:icon="[^"]*"//g' "${{ env.MANIFEST_PATH }}"
+        sed -i 's/android:roundIcon="[^"]*"//g' "${{ env.MANIFEST_PATH }}"
+        sed -i 's/android:label="[^"]*"//g' "${{ env.MANIFEST_PATH }}"
+        
+        # <application тегінің ішіне біздің жаңа баптауларды нақты қосу
+        sed -i 's/<application/<application android:label="@string\/app_name" android:icon="@mipmap\/ic_launcher" android:roundIcon="@mipmap\/ic_launcher"/g' "${{ env.MANIFEST_PATH }}"
+        echo "[+] Манифест толықтай күштеп патчталды."
+
+    # 3. Қолданбаның атын "Chat GPT" деп нақты жазу
     - name: Configure App Name Strings
       run: |
         mkdir -p "${{ env.RES_DIR }}/values"
@@ -53,34 +62,37 @@ jobs:
         </resources>
         INNER_EOF
 
-    # 3. Суретті дәл осы анықталған ресурс папкасының ішіне көшіру (Ресурс байланысын түзету)
+    # 4. Ескі иконкаларды тазалап, жаңа .jpg фотоны басты белгіше ету
     - name: Setup App Icon from Project Photo
       run: |
+        # Ескі барлық ic_launcher файлдарын жою (конфликт болмауы үшін)
+        find "${{ env.RES_DIR }}" -name "ic_launcher*" -delete
+        
+        # Жаңа папкаларды құру
         mkdir -p "${{ env.RES_DIR }}/mipmap-hdpi"
         mkdir -p "${{ env.RES_DIR }}/mipmap-mdpi"
         mkdir -p "${{ env.RES_DIR }}/mipmap-xhdpi"
         mkdir -p "${{ env.RES_DIR }}/mipmap-xxhdpi"
         mkdir -p "${{ env.RES_DIR }}/mipmap-xxxhdpi"
         
-        # Репозиторийдегі кез келген .jpg фотоны тауып алып, иконка папкаларына тарату
+        # Локальді папкадағы .jpg фотоны тауып көшіру
         IMG_FILE=$(find . -maxdepth 2 -name "*.jpg" -not -path "*/.*" -print -quit)
         if [ -n "$IMG_FILE" ]; then
-            echo "[+] Табылған сурет көшірілуде: $IMG_FILE"
             cp -f "$IMG_FILE" "${{ env.RES_DIR }}/mipmap-hdpi/ic_launcher.png"
             cp -f "$IMG_FILE" "${{ env.RES_DIR }}/mipmap-mdpi/ic_launcher.png"
             cp -f "$IMG_FILE" "${{ env.RES_DIR }}/mipmap-xhdpi/ic_launcher.png"
             cp -f "$IMG_FILE" "${{ env.RES_DIR }}/mipmap-xxhdpi/ic_launcher.png"
             cp -f "$IMG_FILE" "${{ env.RES_DIR }}/mipmap-xxxhdpi/ic_launcher.png"
-            echo "[+] Иконка файлдары сәтті орналастырылды."
+            echo "[+] Жаңа иконка файлдары сәтті жазылды: $IMG_FILE"
         else
-            echo "[!] Назар аударыңыз: Локальді папкада .jpg сурет табылмады, стандартты иконка қалуы мүмкін."
+            echo "[!] .jpg сурет табылмады!"
         fi
 
-    # 4. Қолданбаны жинақтау
+    # 5. Қолданбаны жинақтау
     - name: Build with Gradle
       run: gradle assembleDebug
 
-    # 5. APK-ны бұлтқа жүктеу
+    # 6. APK-ны бұлтқа жүктеу
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
